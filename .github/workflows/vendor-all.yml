@@ -1,0 +1,183 @@
+# Vendor: track every upstream binary that dotfiles packages without building.
+#
+# One daily cron, one job per package. Jobs deliberately do NOT depend on each
+# other: a failure in one package cannot cancel or block the rest. Each job
+# resolves its own upstream version, downloads the artifact, computes the SRI
+# hash, fills the template under dist/nix/, verifies with a real `nix build`,
+# and uploads the fixed-name pointer to the shared `rolling` release.
+#
+# `prepare` is the single allowed dependency: it only makes sure the rolling
+# release exists, and nothing can be published without it.
+# dotfiles consumes the pointers via pkgs/update-fork-tarballs.sh.
+name: Vendor all
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dist/nix/**'
+      - 'scripts/**'
+      - '.github/workflows/vendor-all.yml'
+  schedule:
+    - cron: '15 4 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Regenerate every pointer even when the version matches
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vendor-all
+  cancel-in-progress: false
+
+env:
+  ROLL_TAG: rolling
+  NIXPKGS_TARBALL: https://channels.nixos.org/nixos-unstable/nixexprs.tar.zst
+
+jobs:
+  prepare:
+    name: Ensure rolling release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          show-progress: false
+          fetch-depth: 1
+      - name: Create rolling release if missing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$ROLL_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 && { echo "exists"; exit 0; }
+          gh release create "$ROLL_TAG" --repo "$GITHUB_REPOSITORY" \
+            --title "Vendor rolling pointers" \
+            --notes "Fixed-name vendored derivations (upstream builds, no fork). dotfiles consumes them via pkgs/update-fork-tarballs.sh." \
+            --target main
+
+  alma:
+    name: alma
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with: { show-progress: false, fetch-depth: 1 }
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      - name: Vendor alma
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE: ${{ github.event.inputs.force || 'false' }}
+        run: bash scripts/vendor-alma.sh
+
+  magpie:
+    name: magpie
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with: { show-progress: false, fetch-depth: 1 }
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      - name: Vendor magpie
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE: ${{ github.event.inputs.force || 'false' }}
+        run: bash scripts/vendor-magpie.sh
+
+  todoist:
+    name: todoist
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with: { show-progress: false, fetch-depth: 1 }
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      - name: Vendor todoist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE: ${{ github.event.inputs.force || 'false' }}
+        run: bash scripts/vendor-todoist.sh
+
+  vscode_insiders:
+    name: vscode-insiders
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with: { show-progress: false, fetch-depth: 1 }
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      - name: Vendor vscode-insiders
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE: ${{ github.event.inputs.force || 'false' }}
+        run: bash scripts/vendor-vscode-insiders.sh
+
+  platform_tools:
+    name: platform-tools
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with: { show-progress: false, fetch-depth: 1 }
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      - name: Vendor platform-tools
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE: ${{ github.event.inputs.force || 'false' }}
+        run: bash scripts/vendor-platform-tools.sh
+
+  w_flow:
+    name: w-flow
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with: { show-progress: false, fetch-depth: 1 }
+      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
+      - name: Vendor w-flow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE: ${{ github.event.inputs.force || 'false' }}
+        run: bash scripts/vendor-w-flow.sh
+
+  summary:
+    name: Summary
+    needs:
+      - alma
+      - magpie
+      - todoist
+      - vscode_insiders
+      - platform_tools
+      - w_flow
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Report per-package results
+        run: |
+          status=0
+          for entry in \
+            "alma: ${{ needs.alma.result }}" \
+            "magpie: ${{ needs.magpie.result }}" \
+            "todoist: ${{ needs.todoist.result }}" \
+            "vscode-insiders: ${{ needs.vscode_insiders.result }}" \
+            "platform-tools: ${{ needs.platform_tools.result }}" \
+            "w-flow: ${{ needs.w_flow.result }}"; do
+            echo "$entry"
+            case "$entry" in
+              *"failure"*|*"cancelled"*) status=1 ;;
+            esac
+          done
+          if [ "$status" -ne 0 ]; then
+            echo "one or more packages failed; the remaining packages were published normally"
+          fi
+          exit "$status"
