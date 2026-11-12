@@ -13,6 +13,7 @@ under its own fixed filename.
 |---|---|---|---|
 | `alma.nix` | [yetone/alma-releases](https://github.com/yetone/alma-releases) | GitHub releases (semver) | [`dist/nix/alma.nix`](dist/nix/alma.nix) |
 | `magpie.nix` | [yetone/magpie](https://github.com/yetone/magpie) | GitHub releases | [`dist/nix/magpie.nix`](dist/nix/magpie.nix) |
+| `orca.nix` | [stablyai/orca](https://github.com/stablyai/orca) | GitHub releases (semver) | [`dist/nix/orca.nix`](dist/nix/orca.nix) |
 | `todoist.nix` | [todoist.com/downloads/linux](https://www.todoist.com/downloads/linux) | download-page redirect | [`dist/nix/todoist.nix`](dist/nix/todoist.nix) |
 | `vscode-insiders.nix` | Microsoft update API | redirect + `code.visualstudio.com/sha` | [`dist/nix/vscode-insiders.nix`](dist/nix/vscode-insiders.nix) |
 | `platform-tools.nix` | [Google repository2-3.xml](https://dl.google.com/android/repository/repository2-3.xml) | stable channel revision | [`dist/nix/platform-tools.nix`](dist/nix/platform-tools.nix) |
@@ -38,5 +39,5 @@ gh workflow run vendor-all.yml -R WantenMN/vendor-nix
 gh workflow run vendor-all.yml -R WantenMN/vendor-nix -f force=true
 ```
 
-`alma`, `todoist` and `vscode-insiders` ship proprietary binaries and are
+`alma`, `orca`, `todoist` and `vscode-insiders` ship proprietary binaries and are
 marked `unfree`; consumers need `nixpkgs.config.allowUnfree` or an allowlist.
