@@ -42,6 +42,7 @@
   nss,
   pango,
   systemd,
+  wayland,
   xdg-utils,
 }:
 
@@ -117,6 +118,10 @@ stdenv.mkDerivation rec {
     nss
     pango
     systemd
+    # Runtime-dlopen'd by resources/bin/orca-wayland-clipboard
+    # (libwayland-client.so.0; clipboard writes fail without it), hence
+    # invisible to autoPatchelf — must stay in the wrapper's LD_LIBRARY_PATH.
+    wayland
   ];
 
   # The bundle ships prebuilt musl variants of native node addons

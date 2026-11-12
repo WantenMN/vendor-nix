@@ -44,5 +44,21 @@ test -f "$out/opt/orca/resources/app.asar"
 test -f "$out/share/applications/orca-ide.desktop"
 grep -q "Exec=$out/bin/orca-ide" "$out/share/applications/orca-ide.desktop"
 
+# resources/bin/orca-wayland-clipboard dlopens libwayland-client.so.0 at
+# runtime, so autoPatchelf cannot see it (not DT_NEEDED). If it stops
+# resolving via the wrapper's LD_LIBRARY_PATH, every clipboard write fails
+# with "Wayland clipboard write failed". Assert resolvability, not just
+# closure membership.
+libpath=$(wrapper_libpath "$out/bin/orca-ide")
+[ -n "$libpath" ] || die "no LD_LIBRARY_PATH entries in wrapper $out/bin/orca-ide"
+wayland_so=
+old_ifs=$IFS; IFS=:
+for d in $libpath; do
+  if [ -f "$d/libwayland-client.so.0" ]; then wayland_so="$d/libwayland-client.so.0"; break; fi
+done
+IFS=$old_ifs
+[ -n "$wayland_so" ] || die "libwayland-client.so.0 not reachable via wrapper LD_LIBRARY_PATH"
+log "wayland clipboard dep: $wayland_so"
+
 publish_asset "$target"
 log "published: $target"
