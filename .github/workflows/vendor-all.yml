@@ -60,21 +60,6 @@ jobs:
             --notes "Fixed-name vendored derivations (upstream builds, no fork). dotfiles consumes them via pkgs/update-fork-tarballs.sh." \
             --target main
 
-  alma:
-    name: alma
-    needs: prepare
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with: { show-progress: false, fetch-depth: 1 }
-      - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31.11.3
-      - name: Vendor alma
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FORCE: ${{ github.event.inputs.force || 'false' }}
-        run: bash scripts/vendor-alma.sh
-
   magpie:
     name: magpie
     needs: prepare
@@ -168,7 +153,6 @@ jobs:
   summary:
     name: Summary
     needs:
-      - alma
       - magpie
       - orca
       - todoist
@@ -182,7 +166,6 @@ jobs:
         run: |
           status=0
           for entry in \
-            "alma: ${{ needs.alma.result }}" \
             "magpie: ${{ needs.magpie.result }}" \
             "orca: ${{ needs.orca.result }}" \
             "todoist: ${{ needs.todoist.result }}" \
